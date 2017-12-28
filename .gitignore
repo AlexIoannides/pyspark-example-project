@@ -1,0 +1,6 @@
+.idea/*
+metastore_db/*
+spark_warehouse/*
+virtual_env/*
+derby.log
+.DS_Store
