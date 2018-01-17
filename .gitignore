@@ -1,6 +1,6 @@
 .idea/*
 metastore_db/*
 spark_warehouse/*
-virtual_env/*
+venv/*
 derby.log
 .DS_Store
