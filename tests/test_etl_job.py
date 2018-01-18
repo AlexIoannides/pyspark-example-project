@@ -2,68 +2,79 @@
 test_etl_job.py
 ~~~~~~~~~~~~~~~
 
-This module contains unit tests for the individual units of ETL
-contained in etl_job.py. It makes use of a local version of PySpark
+This module contains unit tests for the transformation steps of the ETL
+job defiend in etl_job.py. It makes use of a local version of PySpark
 that is bundled with the PySpark package.
 """
 import unittest
 
-from pyspark.sql import SparkSession
-from pyspark.sql.dataframe import DataFrame
+import json
+
+from pyspark.sql.functions import mean
 
 import etl_job
 
 
 class SparkETLTests(unittest.TestCase):
-    "Test suite for components in etl_job.py"
+    """Test suite for transformation in etl_job.py
+    """
 
-    def test_extract_data(self):
-        """Test extract step
+    def setUp(self):
+        """Start Spark, define config and path to test data
         """
-        # start Spark locally and retrieve a session for this test app
-        spark = SparkSession\
-            .builder \
-            .master('local[*]') \
-            .appName('test_etl_job') \
-            .getOrCreate()
+        self.config = json.loads("""{"steps_per_floor": 21}""")
+        self.spark, *_ = etl_job.start_spark()
+        self.test_data_path = 'test_data/'
 
-        data = etl_job.extract_data(spark)
-        num_rows = data.count()
-        columns = data.columns
-
-        self.assertEqual(type(data), DataFrame)
-        self.assertEqual(num_rows, 8)
-        self.assertTrue(
-            [col in ['id', 'first_name', 'second_name', 'floor']
-             for col in columns])
-
-        spark.stop()
-
-
-    def test_trandform_data(self):
-        """Test transform step
+    def tearDown(self):
+        """Stop Spark
         """
-        # start Spark locally and retrieve a session for this test app
-        spark = SparkSession\
-            .builder \
-            .master('local[*]') \
-            .appName('test_etl_job') \
-            .getOrCreate()
+        self.spark.stop()
 
-        data = etl_job.extract_data(spark)
-        data_transformed = etl_job.transform_data(data, 21)
-        num_rows = data_transformed.count()
-        columns = data_transformed.columns
+    def test_transform_data(self):
+        """Test data transformer.
 
-        self.assertEqual(type(data_transformed), DataFrame)
-        self.assertEqual(num_rows, 8)
-        self.assertTrue(
-            [col in ['id', 'name', 'steps_to_desk'] for col in columns])
+        Using small chunks of input data and expected output data, we
+        test the transformation step to make sure it's working as
+        expected.
+        """
+        # assemble
+        input_data = (
+            self.spark
+            .read
+            .parquet(self.test_data_path + 'employees'))
 
-        spark.stop()
+        expected_data = (
+            self.spark
+            .read
+            .parquet(self.test_data_path + 'employees_report'))
+
+        expected_cols = len(expected_data.columns)
+        expected_rows = expected_data.count()
+        expected_avg_steps = (
+            expected_data
+            .agg(mean('steps_to_desk').alias('avg_steps_to_desk'))
+            .collect()[0]
+            ['avg_steps_to_desk'])
+
+        # act
+        data_transformed = etl_job.transform_data(input_data, 21)
+
+        cols = len(expected_data.columns)
+        rows = expected_data.count()
+        avg_steps = (
+            expected_data
+            .agg(mean('steps_to_desk').alias('avg_steps_to_desk'))
+            .collect()[0]
+            ['avg_steps_to_desk'])
+
+        # assert
+        self.assertEqual(expected_cols, cols)
+        self.assertEqual(expected_rows, rows)
+        self.assertEqual(expected_avg_steps, avg_steps)
+        self.assertTrue([col in expected_data.columns
+                         for col in data_transformed.columns])
 
 
 if __name__ == '__main__':
-
-    # run unittests
     unittest.main()

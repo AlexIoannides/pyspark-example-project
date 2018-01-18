@@ -1,6 +1,8 @@
 .idea/*
-metastore_db/*
-spark_warehouse/*
+*/__pycache__/*
+*?metastore_db/*
+*/spark_warehouse/*
 venv/*
+loaded_data/*
 derby.log
 .DS_Store
