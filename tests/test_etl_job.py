@@ -3,7 +3,7 @@ test_etl_job.py
 ~~~~~~~~~~~~~~~
 
 This module contains unit tests for the transformation steps of the ETL
-job defiend in etl_job.py. It makes use of a local version of PySpark
+job defined in etl_job.py. It makes use of a local version of PySpark
 that is bundled with the PySpark package.
 """
 import unittest
