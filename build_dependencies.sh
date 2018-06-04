@@ -37,7 +37,7 @@ else
     # install packages to a temporary directory and zip it
     ./${2}/bin/pip3 install -r requirements.txt --target ./packages
 
-    if [ -d packages ]
+    if [ "$(ls -A packages)" ]
     then
         cd packages
         find . -name "*.pyc" -delete
