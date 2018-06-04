@@ -33,6 +33,7 @@ else
     # remove pyspark from list of packages as this exists on Spark cluster and
     # will likely lead to conflicts
     sed -i '' '/pyspark/d' requirements.txt
+    sed -i '' '/py4j/d' requirements.txt
 
     # install packages to a temporary directory and zip it
     ./${2}/bin/pip3 install -r requirements.txt --target ./packages
