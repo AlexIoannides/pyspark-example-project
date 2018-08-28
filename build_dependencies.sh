@@ -38,6 +38,9 @@ else
     # install packages to a temporary directory and zip it
     ./${2}/bin/pip3 install -r requirements.txt --target ./packages
 
+    # remove requirements.txt as it is now unnecessary
+    rm requirements.txt
+
     if [ "$(ls -A packages)" ]
     then
         cd packages

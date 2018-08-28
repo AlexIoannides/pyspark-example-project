@@ -2,6 +2,7 @@
 */__pycache__/*
 *?metastore_db/*
 */spark_warehouse/*
+.vscode/*
 venv/*
 loaded_data/*
 derby.log
