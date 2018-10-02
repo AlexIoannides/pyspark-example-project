@@ -1,6 +1,6 @@
 # PySpark Example Project
 
-This document is designed to be read in parallel with the code in the `pyspark-template-project` reposotory. Together, these constitute what we consider to be a 'best practices' approach and template project for writing ETL jobs using Apache Spark and its Python ('PySpark') APIs. This project addresses the following topics:
+This document is designed to be read in parallel with the code in the `pyspark-template-project` repository. Together, these constitute what we consider to be a 'best practices' approach to writing ETL jobs using Apache Spark and its Python ('PySpark') APIs. This project addresses the following topics:
 
 - how to pass configuration parameters to a PySpark job;
 - how to handle dependencies on other modules and packages;
@@ -51,7 +51,7 @@ The `python3` command could just as well be `ipython3`, for example,
 pipenv run ipython
 ```
 
-This will fire-up an IPyton console session *where the default Python 3 kernel includes all of the direct and development project dependencies*. This is our preference.
+This will fire-up an IPyton console session *where the default Python 3 kernel includes all of the direct and development project dependencies* - this is our preference.
 
 ### Pipenv Shells
 
@@ -61,7 +61,7 @@ Prepending `pipenv` to every command you want to run within the context of your 
 pipenv shell
 ```
 
-which is equivalent to 'activating' the virtual environment. Any command will now be executed within the virtual environment. Use `exit` to leave the shell session.
+This is equivalent to 'activating' the virtual environment; any command will now be executed within the virtual environment. Use `exit` to leave the shell session.
 
 ## ETL Project Structure
 
@@ -71,6 +71,7 @@ The basic project structure is as follows:
 root/
  |-- dependencies/
  |   |-- logging.py
+ |   |-- spark.py
  |-- jobs/
  |   |-- etl_job.py
  |-- configs/
@@ -80,13 +81,13 @@ root/
  |   |-- | -- employees/
  |   |-- | -- employees_report/
  |   |-- test_etl_job.py
- |   build_dependencies_zip.sh
+ |   build_dependencies.sh
  |   packages.zip
  |   Pipfile
  |   Pipfile.lock
 ```
 
-The main Python module containing the ETL job (which will be sent to the Spark cluster), is `etl_job.py`. Any external configuration parameters required by `etl_job.py` are stored in JSON format in `etl_config.json`. Additional modules that support this job can be kept in the `dependencies/` folder (more on this later). In the project's root we include `build_dependencies.sh`, which is bash script for building these dependencies into a zip-file to be sent to the cluster (`packages.zip`). Unit test modules are kept in the `tests/` folder and small chunks of representative input and output data, to be use with the tests, are kept in `tests/test_data` folder.
+The main Python module containing the ETL job (which will be sent to the Spark cluster), is `jobs/etl_job.py`. Any external configuration parameters required by `etl_job.py` are stored in JSON format in `configs/etl_config.json`. Additional modules that support this job can be kept in the `dependencies` folder (more on this later). In the project's root we include `build_dependencies.sh`, which is bash script for building these dependencies into a zip-file to be sent to the cluster (`packages.zip`). Unit test modules are kept in the `tests` folder and small chunks of representative input and output data, to be use with the tests, are kept in `tests/test_data` folder.
 
 ## Running the ETL job
 
@@ -103,8 +104,9 @@ jobs/etl_job.py
 
 Briefly, the options supplied serve the following purposes:
 
-- `--master spark://localhost:7077` - the address of the Spark cluster to start the job on. If you have a Spark cluster in operation (either in single-executor mode locally or something larger in the cloud) and want to send the job there, then modify this with the apprioriate Spark IP - e.g. `spark://localhost:7077`;
+- `--master local[*]` - the address of the Spark cluster to start the job on. If you have a Spark cluster in operation (either in single-executor mode locally, or something larger in the cloud) and want to send the job there, then modify this with the apprioriate Spark IP - e.g. `spark://the-clusters-ip-address:7077`;
 - `--packages 'com.somesparkjar.dependency:1.0.0,...'` - Maven coordinates for any JAR dependencies required by the job (e.g. JDBC driver for connecting to a relational database);
+- `--files configs/etl_config.json` - the (optional) path to any config file that may be required by the ETL job;
 - `--py-files packages.zip` - archive containing Python dependencies (modules) referenced by the job; and,
 - `jobs/etl_job.py` - the Python module file containing the ETL job to execute.
 
@@ -126,7 +128,7 @@ For the exact details of how the configuration file is located, opened and parse
 
 ## Testing and Debugging Spark Jobs Using `start_spark`
 
-It is not pracital to test and debug Spark jobs by sending them to a cluster using `spark-submit` and examining stack traces for clues on what went wrong. A more productive workflow is to use an interactive console session (e.g. IPython) or a debugger (e.g. the `pdb` package in the Python standard library or the Python dubugger in Visual Studio Code). In practice, however, it can be hard to test and debug Spark jobs in this way, as they implicity rely on arguements that are sent to `spark-submit`, which are not available in a console or debug session.
+It is not practical to test and debug Spark jobs by sending them to a cluster using `spark-submit` and examining stack traces for clues on what went wrong. A more productive workflow is to use an interactive console session (e.g. IPython) or a debugger (e.g. the `pdb` package in the Python standard library or the Python dubugger in Visual Studio Code). In practice, however, it can be hard to test and debug Spark jobs in this way, as they implicity rely on arguements that are sent to `spark-submit`, which are not available in a console or debug session.
 
 We wrote the `start_spark` function - found in `dependencies/spark.py` - to facilitate the development of Spark jobs that are aware of the context in which they are being executed - i.e. as `spark-submit` jobs or within an IPython console, etc. The expected location of the Spark and job configuration parameters required by the job, is contingent on which execution context has been detected. The doscstring for `start_spark` gives the precise details,
 
@@ -198,6 +200,12 @@ More generally, transformation functions should be designed to be idempotent. Th
 In order to test with Spark, we use the `pyspark` Python package, which is bundled with the Spark JARs required to programmatically start-up and tear-down a local Spark instance, on a per-test-suite basis (we recommend using the `setUp` and `tearDown` methods in `unittest.TestCase` to do this once per test-suite). Note, that using `pyspark` to run Spark is an alternative way of developing with Spark as opposed to using the PySpark shell or `spark-submit`.
 
 Given that we have chosen to structure our ETL jobs in such a way as to isolate the 'Transformation' step into its own function (see 'Structure of an ETL job' above), we are free to feed it a small slice of 'real-world' production data that has been persisted locally - e.g. in `tests/test_data` or some easily accessible network directory - and check it against known results (e.g. computed manually or interactively within a Python interactive console session).
+
+To execute the example unit test for this project run,
+
+```bash
+pipenv run python -m unittest tests/test_*.py
+```
 
 ## Packaging ETL Job Dependencies
 
