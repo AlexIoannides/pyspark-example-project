@@ -1,0 +1,14 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+
+[dev-packages]
+pyspark = "==2.3.1"
+ipython = "*"
+"flake8" = "*"
+
+[requires]
+python_version = "3.6"
