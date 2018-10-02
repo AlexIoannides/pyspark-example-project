@@ -10,12 +10,12 @@ command found in the '/bin' directory of all Spark distributions
 example, this example script can be executed as follows,
 
     $SPARK_HOME/bin/spark-submit \
-    --master local[*] \
+    --master spark://localhost:7077 \
     --py-files packages.zip \
     --files etl_config.json \
     etl_job.py
 
-where dependencies.zip contains Python modules required by ETL job (in
+where packages.zip contains Python modules required by ETL job (in
 this example it contains a class to provide access to Spark's logger),
 which need to be made available to each executor process on every node
 in the cluster; etl_config.json is a text file sent to the cluster,
@@ -33,12 +33,14 @@ and jobs or called from within another environment (e.g. a Jupyter or
 Zeppelin notebook).
 """
 
-from os import listdir, path
+import __main__
+
+from os import environ, listdir, path
 from json import loads
 
 from pyspark import SparkFiles
 from pyspark.sql import SparkSession, Row
-from pyspark.sql.functions import *
+from pyspark.sql.functions import col, concat_ws, lit
 
 from dependencies import logging
 
@@ -85,15 +87,19 @@ def transform_data(df, steps_per_floor_):
     """Transform original dataset.
 
     :param df: Input DataFrame.
-    :param steps_per_floor_: The number of steps per-floor at 43 Tanner Street.
+    :param steps_per_floor_: The number of steps per-floor at 43 Tanner
+        Street.
     :return: Transformed DataFrame.
     """
     df_transformed = (
         df
         .select(
             col('id'),
-            concat_ws(' ', col('first_name'), col('second_name')).alias('name'),
-            (col('floor') * lit(steps_per_floor_)).alias('steps_to_desk')))
+            concat_ws(
+                ' ',
+                col('first_name'),
+                col('second_name')).alias('name'),
+               (col('floor') * lit(steps_per_floor_)).alias('steps_to_desk')))
 
     return df_transformed
 
@@ -157,8 +163,8 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
 
     Start a Spark session on the worker node and register the Spark
     application with the cluster. Note, that only the app_name argument
-    will apply when this is called from a script sent to spark-submit. 
-    All other arguments exist solely for testing the script from within 
+    will apply when this is called from a script sent to spark-submit.
+    All other arguments exist solely for testing the script from within
     an interactive Python console.
 
     This function also looks for a file ending in 'config.json' that
@@ -167,17 +173,17 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
     configuration), into a dict of ETL job configuration parameters,
     which are returned as the last element in the tuple returned by
     this function. If the file cannot be found then the return tuple
-    only contains the Spark session and Spark logger objects and None 
+    only contains the Spark session and Spark logger objects and None
     for config.
 
     The function checks the enclosing environment to see if it is being
-    run from inside an interactive console session or from an 
-    environment which has a DEBUG environment varibale set (i.e. from 
-    within a DEBUG run with custom environment variables). In this 
-    scenario, the function uses all available function arguments to 
+    run from inside an interactive console session or from an
+    environment which has a DEBUG environment varibale set (i.e. from
+    within a DEBUG run with custom environment variables). In this
+    scenario, the function uses all available function arguments to
     start a PySpark driver from the local PySpark package as opposed to
-    using the spark-submit and Spark cluster defaults. This will also 
-    use local module imports, as opposed to those in the zip archive 
+    using the spark-submit and Spark cluster defaults. This will also
+    use local module imports, as opposed to those in the zip archive
     sent to spark via the --py-files flag in spark-submit.
 
     :param app_name: Name of Spark app.
