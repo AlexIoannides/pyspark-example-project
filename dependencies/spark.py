@@ -102,7 +102,7 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
         config_dict = loads(config_json)
         spark_logger.warn('loaded config from ' + config_files[0])
     else:
-        spark_logger.error('no config file found')
+        spark_logger.warn('no config file found')
         config_dict = None
 
     return spark_sess, spark_logger, config_dict
