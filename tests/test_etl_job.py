@@ -12,7 +12,8 @@ import json
 
 from pyspark.sql.functions import mean
 
-import etl_job
+from dependencies.spark import start_spark
+from jobs.etl_job import transform_data
 
 
 class SparkETLTests(unittest.TestCase):
@@ -23,8 +24,8 @@ class SparkETLTests(unittest.TestCase):
         """Start Spark, define config and path to test data
         """
         self.config = json.loads("""{"steps_per_floor": 21}""")
-        self.spark, *_ = etl_job.start_spark()
-        self.test_data_path = 'test_data/'
+        self.spark, *_ = start_spark()
+        self.test_data_path = 'tests/test_data/'
 
     def tearDown(self):
         """Stop Spark
@@ -58,7 +59,7 @@ class SparkETLTests(unittest.TestCase):
             ['avg_steps_to_desk'])
 
         # act
-        data_transformed = etl_job.transform_data(input_data, 21)
+        data_transformed = transform_data(input_data, 21)
 
         cols = len(expected_data.columns)
         rows = expected_data.count()
