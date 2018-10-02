@@ -10,12 +10,12 @@ command found in the '/bin' directory of all Spark distributions
 example, this example script can be executed as follows,
 
     $SPARK_HOME/bin/spark-submit \
-    --master local[*] \
-    --py-files dependencies.zip \
-    --files etl_config.json \
-    etl_job.py
+    --master spark://localhost:7077 \
+    --py-files packages.zip \
+    --files configs/etl_config.json \
+    jobs/etl_job.py
 
-where dependencies.zip contains Python modules required by ETL job (in
+where packages.zip contains Python modules required by ETL job (in
 this example it contains a class to provide access to Spark's logger),
 which need to be made available to each executor process on every node
 in the cluster; etl_config.json is a text file sent to the cluster,
@@ -32,17 +32,11 @@ functions, such that the key Transform steps can be covered by tests
 and jobs or called from within another environment (e.g. a Jupyter or
 Zeppelin notebook).
 """
-# imports from Python Standard Library
-from os import listdir, path
-from json import loads
 
-# imports downloaded from PyPi
-from pyspark import SparkFiles
-from pyspark.sql import SparkSession, Row
-from pyspark.sql.functions import *
+from pyspark.sql import Row
+from pyspark.sql.functions import col, concat_ws, lit
 
-# local dependencies
-from dependencies import logging
+from dependencies.spark import start_spark
 
 
 def main():
@@ -53,7 +47,7 @@ def main():
     # start Spark application and get Spark session, logger and config
     spark, log, config = start_spark(
         app_name='my_etl_job',
-        files=['etl_config.json'])
+        files=['configs/etl_config.json'])
 
     # log that main ETL job is starting
     log.warn('etl_job is up-and-running')
@@ -87,15 +81,19 @@ def transform_data(df, steps_per_floor_):
     """Transform original dataset.
 
     :param df: Input DataFrame.
-    :param steps_per_floor_: The number of steps per-floor at 43 Tanner Street.
+    :param steps_per_floor_: The number of steps per-floor at 43 Tanner
+        Street.
     :return: Transformed DataFrame.
     """
     df_transformed = (
         df
         .select(
             col('id'),
-            concat_ws(' ', col('first_name'), col('second_name')).alias('name'),
-            (col('floor') * lit(steps_per_floor_)).alias('steps_to_desk')))
+            concat_ws(
+                ' ',
+                col('first_name'),
+                col('second_name')).alias('name'),
+               (col('floor') * lit(steps_per_floor_)).alias('steps_to_desk')))
 
     return df_transformed
 
@@ -151,85 +149,6 @@ def create_test_data(spark, config):
      .parquet('tests/test_data/employees_report', mode='overwrite'))
 
     return None
-
-
-def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
-                files=[], spark_config={}):
-    """Start Spark session, get the Spark logger and load config files.
-
-    Start a Spark session on the worker node and register the Spark
-    application with the cluster. NOTE - only the app_name argument
-    will apply when this is called from a script sent to spark-submit
-    (i.e. when __name__ = '__main__'). All other arguments exist solely
-    for testing the script from within an interactive Python console.
-
-    This function also looks for a file ending in 'config.json' that
-    can be sent with the Spark job. If it is found, it is opened,
-    the contents parsed (assuming it contains valid JSON for the ETL job
-    configuration), into a dict of ETL job configuration parameters,
-    which are returned as the last element in the tuple returned by
-    this function. If the file cannot be found then the return tuple
-    only contains the Spark session and Spark logger objects.
-
-    :param app_name: Name of Spark app.
-    :param master: Cluster connection details (defaults to local[*].
-    :param jar_packages: List of Spark JAR package names.
-    :param files: List of files to send to Spark cluster (master and
-    workers).
-    :param spark_config: Dictionary of config key-value pairs.
-    :return: A tuple of references to the Spark session, logger and
-    config dict (only if available).
-    """
-    if __name__ == '__main__':
-        # get Spark session factory
-        spark_builder = (
-            SparkSession
-            .builder
-            .appName(app_name))
-    else:
-        # get Spark session factory
-        spark_builder = (
-            SparkSession
-            .builder
-            .master(master)
-            .appName(app_name))
-
-        # create Spark JAR packages string
-        spark_jars_packages = ','.join(list(jar_packages))
-        spark_builder.config('spark.jars.packages', spark_jars_packages)
-
-        spark_files = ','.join(list(files))
-        spark_builder.config('spark.files', spark_files)
-
-        # add other config params
-        for key, val in spark_config.items():
-            spark_builder.config(key, val)
-
-    # create session and retrieve Spark logger object
-    spark_sess = spark_builder.getOrCreate()
-    spark_logger = logging.Log4j(spark_sess)
-
-    # get config file if sent to cluster with --files
-    spark_files_dir = SparkFiles.getRootDirectory()
-    config_files = [filename
-                    for filename in listdir(spark_files_dir)
-                    if filename.endswith('config.json')]
-
-    if len(config_files) != 0:
-        path_to_config_file = path.join(spark_files_dir, config_files[0])
-        with open(path_to_config_file, 'r') as config_file:
-            config_json = config_file.read().replace('\n', '')
-        config_dict = loads(config_json)
-        spark_logger.warn('loaded config from ' + config_files[0])
-    else:
-        config_dict = None
-
-    # build return tuple conditional on presence of config
-    if config_dict is not None:
-        return_tup = spark_sess, spark_logger, config_dict
-    else:
-        return_tup = spark_sess, spark_logger
-    return return_tup
 
 
 # entry point for PySpark ETL application
