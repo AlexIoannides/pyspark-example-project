@@ -54,7 +54,9 @@ def main():
 
     # execute ETL pipeline
     data = extract_data(spark)
-    data_transformed = transform_data(data, config['steps_per_floor'])
+    v = config['year_of_joining']
+    print("val: "+str(v))
+    data_transformed = transform_data(data, config['year_of_joining'])
     load_data(data_transformed)
 
     # log the success and terminate Spark application
@@ -72,12 +74,12 @@ def extract_data(spark):
     df = (
         spark
         .read
-        .parquet('tests/test_data/employees'))
+        .csv('C:/Users/Dani/PycharmProjects/pyspark-example-project/tests/test_data/employees1000.csv', header=True))
 
     return df
 
 
-def transform_data(df, steps_per_floor_):
+def transform_data(df, year_of_joining_):
     """Transform original dataset.
 
     :param df: Input DataFrame.
@@ -88,13 +90,15 @@ def transform_data(df, steps_per_floor_):
     df_transformed = (
         df
         .select(
-            col('id'),
+            col('emp_id'),
             concat_ws(
                 ' ',
                 col('first_name'),
-                col('second_name')).alias('name'),
-               (col('floor') * lit(steps_per_floor_)).alias('steps_to_desk')))
-
+                col('last_name')).alias('nameeeee'),
+            col('gender'),
+            col('year_of_joining')
+        )
+    )
     return df_transformed
 
 
