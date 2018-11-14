@@ -6,6 +6,7 @@ This module contains unit tests for the transformation steps of the ETL
 job defined in etl_job.py. It makes use of a local version of PySpark
 that is bundled with the PySpark package.
 """
+import os
 import unittest
 
 import json
@@ -22,6 +23,10 @@ class SparkETLTests(unittest.TestCase):
     def setUp(self):
         """Start Spark, define config and path to test data
         """
+
+        print(os.getcwd())
+        print(os.listdir())
+
         self.config = json.loads("""{"steps_per_floor": 21}""")
         self.spark, *_ = start_spark()
         self.test_data_path = 'tests/test_data/'
@@ -42,12 +47,12 @@ class SparkETLTests(unittest.TestCase):
         input_data = (
             self.spark
             .read
-            .csv('C:/Users/Dani/PycharmProjects/pyspark-example-project/tests/test_data/employees1000.csv', header=True))
+            .csv('E:\pyspark-etl-example-project/tests/test_data/employees1000.csv', header=True))
 
         expected_data = (
             self.spark
             .read
-            .csv('C:/Users/Dani/PycharmProjects/pyspark-example-project/tests/test_data/employees1000.csv', header=True))
+            .csv('E:\pyspark-etl-example-project/tests/test_data/employees1000.csv', header=True))
         expected_cols = len(expected_data.columns)
         expected_rows = expected_data.count()
 

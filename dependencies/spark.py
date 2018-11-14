@@ -91,7 +91,6 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
 
     # get config file if sent to cluster with --files
     config_file = 'etl_config.json'
-
     with open('../configs/etl_config.json', 'r') as config_file:
         config_json = config_file.read().replace('\n', '')
     config_dict = loads(config_json)

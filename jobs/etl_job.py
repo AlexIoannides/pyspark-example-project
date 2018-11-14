@@ -32,10 +32,9 @@ functions, such that the key Transform steps can be covered by tests
 and jobs or called from within another environment (e.g. a Jupyter or
 Zeppelin notebook).
 """
-
+import os
 from pyspark.sql import Row
 from pyspark.sql.functions import col, concat_ws, lit
-
 from dependencies.spark import start_spark
 
 
@@ -45,17 +44,17 @@ def main():
     :return: None
     """
     # start Spark application and get Spark session, logger and config
+    # print(os.getcwd())
+    # print(os.listdir())
     spark, log, config = start_spark(
         app_name='my_etl_job',
-        files=['configs/etl_config.json'])
+        files=['../configs/etl_config.json'])
 
     # log that main ETL job is starting
     log.warn('etl_job is up-and-running')
 
     # execute ETL pipeline
     data = extract_data(spark)
-    v = config['year_of_joining']
-    print("val: "+str(v))
     data_transformed = transform_data(data, config['year_of_joining'])
     load_data(data_transformed)
 
@@ -67,14 +66,15 @@ def main():
 
 def extract_data(spark):
     """Load data from Parquet file format.
-
+())
     :param spark: Spark session object.
     :return: Spark DataFrame.
     """
+    # print(os.listdir())
     df = (
         spark
         .read
-        .csv('C:/Users/Dani/PycharmProjects/pyspark-example-project/tests/test_data/employees1000.csv', header=True))
+        .csv('E:/pyspark-etl-example-project/tests/test_data/employees1000.csv', header=True))
 
     return df
 
@@ -94,11 +94,11 @@ def transform_data(df, year_of_joining_):
             concat_ws(
                 ' ',
                 col('first_name'),
-                col('last_name')).alias('nameeeee'),
+                col('last_name')).alias('name'),
             col('gender'),
             col('year_of_joining')
         )
-    )
+    ).filter("year_of_joining == "+str(year_of_joining_))
     return df_transformed
 
 
@@ -111,7 +111,7 @@ def load_data(df):
     (df
      .coalesce(1)
      .write
-     .csv('loaded_data', mode='overwrite', header=True))
+     .csv('F:/Projects/Python/pyspark-etl-example-project/loaded_data.csv', mode='overwrite', header=True))
     return None
 
 
