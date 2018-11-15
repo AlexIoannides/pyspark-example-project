@@ -99,6 +99,7 @@ def transform_data(df, year_of_joining_):
             col('year_of_joining')
         )
     ).filter("year_of_joining == "+str(year_of_joining_))
+
     return df_transformed
 
 
@@ -115,7 +116,11 @@ def load_data(df):
     return None
 
 
+
+
+
 def create_test_data(spark, config):
+    # Branch: Jira-1234
     """Create test data.
 
     This function creates both both pre- and post- transformation data
