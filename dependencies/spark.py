@@ -8,8 +8,7 @@ Module containing helper function for use with Apache Spark
 import __main__
 
 from os import environ, listdir, path
-from json import loads
-
+import json
 from pyspark import SparkFiles
 from pyspark.sql import SparkSession
 
@@ -29,7 +28,7 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
     This function also looks for a file ending in 'config.json' that
     can be sent with the Spark job. If it is found, it is opened,
     the contents parsed (assuming it contains valid JSON for the ETL job
-    configuration), into a dict of ETL job configuration parameters,
+    configuration) into a dict of ETL job configuration parameters,
     which are returned as the last element in the tuple returned by
     this function. If the file cannot be found then the return tuple
     only contains the Spark session and Spark logger objects and None
@@ -37,9 +36,9 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
 
     The function checks the enclosing environment to see if it is being
     run from inside an interactive console session or from an
-    environment which has a `DEBUG` environment varibale set (e.g.
+    environment which has a `DEBUG` environment variable set (e.g.
     setting `DEBUG=1` as an environment variable as part of a debug
-    configuration within an IDE such as Visual Studio Code or PyCharm in
+    configuration within an IDE such as Visual Studio Code or PyCharm.
     In this scenario, the function uses all available function arguments
     to start a PySpark driver from the local PySpark package as opposed
     to using the spark-submit and Spark cluster defaults. This will also
@@ -47,7 +46,7 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
     sent to spark via the --py-files flag in spark-submit.
 
     :param app_name: Name of Spark app.
-    :param master: Cluster connection details (defaults to local[*].
+    :param master: Cluster connection details (defaults to local[*]).
     :param jar_packages: List of Spark JAR package names.
     :param files: List of files to send to Spark cluster (master and
         workers).
@@ -57,8 +56,8 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
     """
 
     # detect execution environment
-    flag_repl = False if hasattr(__main__, '__file__') else True
-    flag_debug = True if 'DEBUG' in environ.keys() else False
+    flag_repl = not(hasattr(__main__, '__file__'))
+    flag_debug = 'DEBUG' in environ.keys()
 
     if not (flag_repl or flag_debug):
         # get Spark session factory
@@ -95,11 +94,10 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
                     for filename in listdir(spark_files_dir)
                     if filename.endswith('config.json')]
 
-    if len(config_files) != 0:
+    if config_files:
         path_to_config_file = path.join(spark_files_dir, config_files[0])
         with open(path_to_config_file, 'r') as config_file:
-            config_json = config_file.read().replace('\n', '')
-        config_dict = loads(config_json)
+            config_dict = json.load(config_file)
         spark_logger.warn('loaded config from ' + config_files[0])
     else:
         spark_logger.warn('no config file found')
