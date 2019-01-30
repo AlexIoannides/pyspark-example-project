@@ -13,14 +13,14 @@ The basic project structure is as follows:
 
 ```bash
 root/
+ |-- configs/
+ |   |-- etl_config.json
  |-- dependencies/
  |   |-- logging.py
  |   |-- spark.py
  |-- jobs/
  |   |-- etl_job.py
- |-- configs/
- |   |-- etl_config.json
- |   tests/
+ |-- tests/
  |   |-- test_data/
  |   |-- | -- employees/
  |   |-- | -- employees_report/
@@ -31,19 +31,19 @@ root/
  |   Pipfile.lock
 ```
 
-The main Python module containing the ETL job (which will be sent to the Spark cluster), is `jobs/etl_job.py`. Any external configuration parameters required by `etl_job.py` are stored in JSON format in `configs/etl_config.json`. Additional modules that support this job can be kept in the `dependencies` folder (more on this later). In the project's root we include `build_dependencies.sh`, which is bash script for building these dependencies into a zip-file to be sent to the cluster (`packages.zip`). Unit test modules are kept in the `tests` folder and small chunks of representative input and output data, to be use with the tests, are kept in `tests/test_data` folder.
+The main Python module containing the ETL job (which will be sent to the Spark cluster), is `jobs/etl_job.py`. Any external configuration parameters required by `etl_job.py` are stored in JSON format in `configs/etl_config.json`. Additional modules that support this job can be kept in the `dependencies` folder (more on this later). In the project's root we include `build_dependencies.sh`, which is a bash script for building these dependencies into a zip-file to be sent to the cluster (`packages.zip`). Unit test modules are kept in the `tests` folder and small chunks of representative input and output data, to be used with the tests, are kept in `tests/test_data` folder.
 
 ## Structure of an ETL Job
 
-In order to facilitate easy debugging and testing, we recommend that the 'Transformation' step be isolated from the 'Extract' and 'Load' steps, into it's own function - taking input data arguments in the form of DataFrames and returning the transformed data as a single DataFrame. Then, the code that surrounds the use of the transformation function in the `main()` job function, is concerned with Extracting the data, passing it to the transformation function and then Loading (or writing) the results to their ultimate destination. Testing is simplified, as mock or test data can be passed to the transformation function and the results explicitly verified, which would not be possible if all of the ETL code resided in `main()` and referenced production data sources and destinations.
+In order to facilitate easy debugging and testing, we recommend that the 'Transformation' step be isolated from the 'Extract' and 'Load' steps, into its own function - taking input data arguments in the form of DataFrames and returning the transformed data as a single DataFrame. Then, the code that surrounds the use of the transformation function in the `main()` job function, is concerned with Extracting the data, passing it to the transformation function and then Loading (or writing) the results to their ultimate destination. Testing is simplified, as mock or test data can be passed to the transformation function and the results explicitly verified, which would not be possible if all of the ETL code resided in `main()` and referenced production data sources and destinations.
 
-More generally, transformation functions should be designed to be idempotent. This is technical way of saying that the repeated application of the transformation function should have no impact on the fundamental state of output data, until the instance when the input data changes. One of the key advantages of idempotent ETL jobs, is that they can be set to run repeatedly (e.g. by using `cron` to trigger the `spark-submit` command above, on a pre-defined schedule), rather than having to factor-in potential dependencies on other ETL jobs completing successfully.
+More generally, transformation functions should be designed to be _idempotent_. This is a technical way of saying that the repeated application of the transformation function should have no impact on the fundamental state of output data, until the moment the input data changes. One of the key advantages of idempotent ETL jobs, is that they can be set to run repeatedly (e.g. by using `cron` to trigger the `spark-submit` command above, on a pre-defined schedule), rather than having to factor-in potential dependencies on other ETL jobs completing successfully.
 
 ## Passing Configuration Parameters to the ETL Job
 
-Although it is possible to pass arguments to `etl_job.py`, as you would for any generic Python module running as a 'main' program  - by specifying them after the module's filename and then parsing these command line arguments - this can get very complicated, very quickly, especially when there are lot of parameters (e.g. credentials for multiple databases, table names, SQL snippets, etc.). This also makes debugging the code from within a Python interpreter is extremely awkward, as you don't have access to the command line arguments that would ordinarily be passed to the code, when calling it from the command line.
+Although it is possible to pass arguments to `etl_job.py`, as you would for any generic Python module running as a 'main' program  - by specifying them after the module's filename and then parsing these command line arguments - this can get very complicated, very quickly, especially when there are lot of parameters (e.g. credentials for multiple databases, table names, SQL snippets, etc.). This also makes debugging the code from within a Python interpreter extremely awkward, as you don't have access to the command line arguments that would ordinarily be passed to the code, when calling it from the command line.
 
-A much more effective solution is to send Spark a separate file - e.g. using the `--files configs/etl_config.json` flag with `spark-subit` - containing the configuration in JSON format, which can be parsed into a Python dictionary in one line of code with `json.loads(config_file_contents)`. Testing the code from within a Python interactive console session is also greatly simplified, as all one has to do to access configuration parameters for testing, is to copy and paste the contents of the file - e.g.,
+A much more effective solution is to send Spark a separate file - e.g. using the `--files configs/etl_config.json` flag with `spark-submit` - containing the configuration in JSON format, which can be parsed into a Python dictionary in one line of code with `json.loads(config_file_contents)`. Testing the code from within a Python interactive console session is also greatly simplified, as all one has to do to access configuration parameters for testing, is to copy and paste the contents of the file - e.g.,
 
 ```python
 import json
@@ -61,10 +61,10 @@ In this project, functions that can be used across different ETL jobs are kept i
 from dependencies.spark import start_spark
 ```
 
-This package, together with any additional dependencies referenced within it, must be to copied to each Spark node for all jobs that use `dependencies` to run. This can be achieved in one of several ways:
+This package, together with any additional dependencies referenced within it, must be copied to each Spark node for all jobs that use `dependencies` to run. This can be achieved in one of several ways:
 
 1. send all dependencies as a `zip` archive together with the job, using `--py-files` with Spark submit;
-2. formally package and upload `dependencies` to somewhere like the `PyPi` archive (or a private version) and then run `pip3 install dependencies` on each node; or,
+2. formally package and upload `dependencies` to somewhere like the `PyPI` archive (or a private version) and then run `pip3 install dependencies` on each node; or,
 3. a combination of manually copying new modules (e.g. `dependencies`) to the Python path of each node and using `pip3 install` for additional dependencies (e.g. for `requests`).
 
 Option (1) is by far the easiest and most flexible approach, so we will make use of this for now. To make this task easier, especially when modules such as `dependencies` have additional dependencies (e.g. the `requests` package), we have provided the `build_dependencies.sh` bash script for automating the production of `packages.zip`, given a list of dependencies documented in `Pipfile` and managed by the `pipenv` python application (discussed below).
@@ -96,7 +96,7 @@ Full details of all possible options can be found [here](http://spark.apache.org
 
 It is not practical to test and debug Spark jobs by sending them to a cluster using `spark-submit` and examining stack traces for clues on what went wrong. A more productive workflow is to use an interactive console session (e.g. IPython) or a debugger (e.g. the `pdb` package in the Python standard library or the Python debugger in Visual Studio Code). In practice, however, it can be hard to test and debug Spark jobs in this way, as they implicitly rely on arguments that are sent to `spark-submit`, which are not available in a console or debug session.
 
-We wrote the `start_spark` function - found in `dependencies/spark.py` - to facilitate the development of Spark jobs that are aware of the context in which they are being executed - i.e. as `spark-submit` jobs or within an IPython console, etc. The expected location of the Spark and job configuration parameters required by the job, is contingent on which execution context has been detected. The doscstring for `start_spark` gives the precise details,
+We wrote the `start_spark` function - found in `dependencies/spark.py` - to facilitate the development of Spark jobs that are aware of the context in which they are being executed - i.e. as `spark-submit` jobs or within an IPython console, etc. The expected location of the Spark and job configuration parameters required by the job, is contingent on which execution context has been detected. The docstring for `start_spark` gives the precise details,
 
 ```python
 def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
@@ -112,7 +112,7 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
     This function also looks for a file ending in 'config.json' that
     can be sent with the Spark job. If it is found, it is opened,
     the contents parsed (assuming it contains valid JSON for the ETL job
-    configuration), into a dict of ETL job configuration parameters,
+    configuration) into a dict of ETL job configuration parameters,
     which are returned as the last element in the tuple returned by
     this function. If the file cannot be found then the return tuple
     only contains the Spark session and Spark logger objects and None
@@ -120,9 +120,9 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
 
     The function checks the enclosing environment to see if it is being
     run from inside an interactive console session or from an
-    environment which has a `DEBUG` environment varibale set (e.g.
+    environment which has a `DEBUG` environment variable set (e.g.
     setting `DEBUG=1` as an environment variable as part of a debug
-    configuration within an IDE such as Visual Studio Code or PyCharm in
+    configuration within an IDE such as Visual Studio Code or PyCharm.
     In this scenario, the function uses all available function arguments
     to start a PySpark driver from the local PySpark package as opposed
     to using the spark-submit and Spark cluster defaults. This will also
@@ -130,7 +130,7 @@ def start_spark(app_name='my_spark_app', master='local[*]', jar_packages=[],
     sent to spark via the --py-files flag in spark-submit.
 
     :param app_name: Name of Spark app.
-    :param master: Cluster connection details (defaults to local[*].
+    :param master: Cluster connection details (defaults to local[*]).
     :param jar_packages: List of Spark JAR package names.
     :param files: List of files to send to Spark cluster (master and
         workers).
