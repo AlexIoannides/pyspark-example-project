@@ -9,6 +9,7 @@ name = "pypi"
 pyspark = "==2.4.0"
 ipython = "*"
 "flake8" = "*"
+pipenv-to-requirements = "*"
 
 [requires]
 python_version = "3.6"
