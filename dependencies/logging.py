@@ -15,8 +15,9 @@ class Log4j(object):
 
     def __init__(self, spark):
         # get spark app details with which to prefix all messages
-        app_id = spark.sparkContext.getConf().get('spark.app.id')
-        app_name = spark.sparkContext.getConf().get('spark.app.name')
+        conf = spark.sparkContext.getConf()
+        app_id = conf.get('spark.app.id')
+        app_name = conf.get('spark.app.name')
 
         log4j = spark._jvm.org.apache.log4j
         message_prefix = '<' + app_name + ' ' + app_id + '>'
