@@ -77,7 +77,7 @@ Assuming that the `$SPARK_HOME` environment variable points to your local Spark 
 $SPARK_HOME/bin/spark-submit \
 --master local[*] \
 --packages 'com.somesparkjar.dependency:1.0.0' \
---py-files dependencies.zip \
+--py-files packages.zip \
 --files configs/etl_config.json \
 jobs/etl_job.py
 ```
