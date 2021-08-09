@@ -33,9 +33,9 @@ class Log4j(object):
         return None
 
     def warn(self, message):
-        """Log an warning.
+        """Log a warning.
 
-        :param: Error message to write to log
+        :param: Warning message to write to log
         :return: None
         """
         self.logger.warn(message)
