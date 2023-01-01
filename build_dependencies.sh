@@ -12,7 +12,7 @@ then
 
     # use Pipenv to create a requirement.txt file
     echo '... creating requirements.txt from Pipfile.lock'
-    pipenv lock -r > requirements.txt
+    pipenv lock > requirements.txt
 
     # install packages to a temporary directory and zip it
     touch requirements.txt  # safeguard in case there are no packages
